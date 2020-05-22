@@ -69,14 +69,18 @@ resource "azurerm_key_vault_secret" "kvs-signalr-connection" {
 }
 
 resource "null_resource" "script-signalr-setappconfig" {
-  # triggers {
-  #     trigger = "${uuid()}"
-  # }
-
-  # depends_on = ["azurerm_signalr_service.sr-signalr"]
+  # Use this mechanism to always execute the script on 'terraform apply'
+  triggers = {
+    build_number = "${timestamp()}"
+  }
 
   provisioner "local-exec" {
-    command = "export AppConfigName='${azurerm_app_configuration.ac-signalr.name}' && export SignalrKvId='${azurerm_key_vault_secret.kvs-signalr-connection.id}' && ./appconfig.sh"
-    # command = "export SignalrKvId=''export SignalRConnectionString='${azurerm_signalr_service.sr-signalr.primary_connection_string}' && ./appconfig.sh"
+
+    command = <<EOH
+      curl -L https://aka.ms/InstallAzureCli | bash
+      chmod 0755 az
+      chmod 0755 appconfig.sh
+      export AppConfigName='${azurerm_app_configuration.ac-signalr.name}' && export SignalrKvId='${azurerm_key_vault_secret.kvs-signalr-connection.id}' && ./appconfig.sh
+  EOH
   }
 }
